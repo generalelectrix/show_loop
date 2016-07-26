@@ -18,7 +18,7 @@ Calling run_show launches the show runtime.
 
 from time import time
 from multiprocessing import Process, Queue
-from logging import log
+import logging as log
 from Queue import Empty
 import traceback
 
@@ -45,93 +45,93 @@ def run_show(
         n_frames=None,
         control_timeout=0.001,
         report_framerate=False):
-        """Run the show loop.
+    """Run the show loop.
 
-        Args:
-            render_action: a closure to call to perform the frame render action.
-                This function should accept three arguments:
-                    - the absolute frame number
-                    - the absolute time associated with the frame number
-                    - the frame data
-                This function may raise an exception if something goes wrong,
-                    preferably either RenderError.  FatalRenderError or any other
-                    exception will cause the render service to terminate.
-                This function must be picklable.
-            control_action: a closure accepting the control_timeout parameter
-                which will block for at most this long while processing input
-                operations.  This function may raise ControlError to report a
-                non-fatal error.
-            update_action: a closure accepting one argument, the update_interval,
-                that updates the state of the show by this timestep.
-            retrieve_show_state: a closure accepting no arguments that returns
-                the current state of the show for rendering
-            quit_check: a closure returning a boolean that can be polled by the
-                show runtime to determine if the show run call should clean up
-                and exit.
-            update_interval (int): number of milliseconds between state updates
-            n_frames (None or int): if None, run forever.  if finite number, only
-                run for this many state updates.
-            control_timeout (default=0.001 s): the interval to wait on a command
-                to appear before checking for a state update
-        """
-        update_number = 0
+    Args:
+        render_action: a closure to call to perform the frame render action.
+            This function should accept three arguments:
+                - the absolute frame number
+                - the absolute time associated with the frame number
+                - the frame data
+            This function may raise an exception if something goes wrong,
+                preferably either RenderError.  FatalRenderError or any other
+                exception will cause the render service to terminate.
+            This function must be picklable.
+        control_action: a closure accepting the control_timeout parameter
+            which will block for at most this long while processing input
+            operations.  This function may raise ControlError to report a
+            non-fatal error.
+        update_action: a closure accepting one argument, the update_interval,
+            that updates the state of the show by this timestep.
+        retrieve_show_state: a closure accepting no arguments that returns
+            the current state of the show for rendering
+        quit_check: a closure returning a boolean that can be polled by the
+            show runtime to determine if the show run call should clean up
+            and exit.
+        update_interval (int): number of milliseconds between state updates
+        n_frames (None or int): if None, run forever.  if finite number, only
+            run for this many state updates.
+        control_timeout (default=0.001 s): the interval to wait on a command
+            to appear before checking for a state update
+    """
+    update_number = 0
 
-        # start up the render server
-        render_server = RenderServer(
-            render_action=render_action,
-            report=report_framerate)
+    # start up the render server
+    render_server = RenderServer(
+        render_action=render_action,
+        report=report_framerate)
 
-        log.info("Starting render server...")
-        render_server.start()
-        log.info("Render server started.")
+    log.info("Starting render server...")
+    render_server.start()
+    log.info("Render server started.")
 
-        time_millis = lambda: int(time()*1000)
+    time_millis = lambda: int(time()*1000)
 
-        last_update = time_millis()
+    last_update = time_millis()
 
-        last_rendered_frame = -1
+    last_rendered_frame = -1
 
-        try:
-            while n_frames is None or update_number < n_frames:
-                # time to quit?
-                if quit_check():
-                    break
+    try:
+        while n_frames is None or update_number < n_frames:
+            # time to quit?
+            if quit_check():
+                break
 
-                # process a control event if one is pending
-                try:
-                    control_action(control_timeout)
-                except ControlError as err:
-                    st = traceback.format_exc()
-                    log.error(
-                        "A control error occurred: {}\n{}"
-                        .format(err, st))
+            # process a control event if one is pending
+            try:
+                control_action(control_timeout)
+            except ControlError as err:
+                st = traceback.format_exc()
+                log.error(
+                    "A control error occurred: {}\n{}"
+                    .format(err, st))
 
-                # compute updates until we're current
+            # compute updates until we're current
+            now = time_millis()
+            time_since_last_update = now - last_update
+
+            while time_since_last_update > update_interval:
+                # update the state of the show
+                update_action(update_interval)
+
+                last_update += update_interval
                 now = time_millis()
                 time_since_last_update = now - last_update
+                update_number += 1
 
-                while time_since_last_update > update_interval:
-                    # update the state of the show
-                    update_action(update_interval)
+            # pass the show state to the render process if it is ready to
+            # draw another frame and it hasn't drawn this frame yet
+            if update_number > last_rendered_frame:
+                rendered = render_server.pass_frame_if_ready(
+                    update_number,
+                    last_update,
+                    retrieve_show_state())
+                if rendered:
+                    last_rendered_frame = update_number
 
-                    last_update += update_interval
-                    now = time_millis()
-                    time_since_last_update = now - last_update
-                    update_number += 1
-
-                # pass the show state to the render process if it is ready to
-                # draw another frame and it hasn't drawn this frame yet
-                if update_number > last_rendered_frame:
-                    rendered = render_server.pass_frame_if_ready(
-                        update_number,
-                        last_update,
-                        retrieve_show_state())
-                    if rendered:
-                        last_rendered_frame = update_number
-
-        finally:
-            render_server.stop()
-            log.info("Shut down render server.")
+    finally:
+        render_server.stop()
+        log.info("Shut down render server.")
 
 # --- frame rendering process ---
 
