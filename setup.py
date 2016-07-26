@@ -4,7 +4,6 @@ try:
     from setuptools import setup, Extension
 except ImportError:
     from distutils.core import setup, Extension
-import numpy
 
 version = '1.0.0'
 
