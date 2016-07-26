@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-from Cython.Build import cythonize
 try:
     from setuptools import setup, Extension
 except ImportError:

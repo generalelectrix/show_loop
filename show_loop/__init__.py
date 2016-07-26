@@ -23,6 +23,11 @@ from Queue import Empty
 import traceback
 
 
+__all__ = (
+    "run_show",
+)
+
+
 # --- main show loop ---
 
 
