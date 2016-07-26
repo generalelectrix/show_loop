@@ -10,8 +10,8 @@ version = '1.0.0'
 requires = []
 
 setup(
-    name='game_loop',
-    packages=['game_loop'],
+    name='show_loop',
+    packages=['show_loop'],
     install_requires=requires,
     license='MIT',
     version=version,
