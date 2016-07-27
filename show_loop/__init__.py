@@ -22,18 +22,11 @@ import logging as log
 from Queue import Empty
 import traceback
 
-
 __all__ = (
     "run_show",
 )
 
-
 # --- main show loop ---
-
-
-class ControlError (Exception):
-    pass
-
 
 def run_show(
         render_action,
@@ -133,7 +126,9 @@ def run_show(
         render_server.stop()
         log.info("Shut down render server.")
 
+
 # --- frame rendering process ---
+
 
 # render server commands
 FRAME = "FRAME"
@@ -145,23 +140,8 @@ FRAME_REQ = "FRAME_REQ"
 FATAL_ERROR = "FATAL_ERROR"
 
 
-class RenderServerError (Exception):
-    """Report an internal error in the render server."""
-    pass
-
-
-class RenderError (Exception):
-    """Report a non-fatal error during rendering.
-
-    Clients implementing render actions can use this exception to report an
-    error condition that is only relevant for the current frame.
-    """
-    pass
-
-
 class RenderServer (object):
     """Responsible for launching and communicating with a render server process."""
-
     def __init__(self, render_action, report=False):
         """Create a new render server handle.
 
@@ -241,6 +221,7 @@ class RenderServer (object):
                         "Unknown response: {}, {}".format(req, payload))
         return False
 
+
 def run_render_server(command, response, render_action, report):
     """Run the frame drawing service.
 
@@ -312,5 +293,27 @@ def run_render_server(command, response, render_action, report):
         return
 
 
+# --- exceptions ---
+
+
+class ControlError (Exception):
+    """Report a non-fatal error during control processing.
+
+    Clients implementing control actions can use this exception to report an
+    error condition that is only relevant for the current frame.
+    """
+    pass
+
+class RenderError (Exception):
+    """Report a non-fatal error during rendering.
+
+    Clients implementing render actions can use this exception to report an
+    error condition that is only relevant for the current frame.
+    """
+    pass
+
+class RenderServerError (Exception):
+    """Report an internal error in the render server."""
+    pass
 
 
