@@ -7,7 +7,7 @@ except ImportError:
 
 version = '1.0.0'
 
-requires = []
+requires = ['multiprocess']
 
 setup(
     name='show_loop',

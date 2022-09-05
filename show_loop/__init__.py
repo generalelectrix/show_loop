@@ -17,9 +17,9 @@ Calling run_show launches the show runtime.
 """
 
 from time import time
-from multiprocessing import Process, Queue
+from multiprocess import Process, Queue
 import logging as log
-from Queue import Empty
+from queue import Empty
 import traceback
 
 __all__ = (
@@ -27,6 +27,7 @@ __all__ = (
 )
 
 # --- main show loop ---
+
 
 def run_show(
         render_action,
@@ -78,7 +79,7 @@ def run_show(
     render_server.start()
     log.info("Render server started.")
 
-    time_millis = lambda: int(time()*1000)
+    def time_millis(): return int(time()*1000)
 
     last_update = time_millis()
 
@@ -142,6 +143,7 @@ FATAL_ERROR = "FATAL_ERROR"
 
 class RenderServer (object):
     """Responsible for launching and communicating with a render server process."""
+
     def __init__(self, render_action, report=False):
         """Create a new render server handle.
 
@@ -211,7 +213,8 @@ class RenderServer (object):
                 return False
             else:
                 if req == FRAME_REQ:
-                    self.command.put((FRAME, (update_number, update_time, frame)))
+                    self.command.put(
+                        (FRAME, (update_number, update_time, frame)))
                     return True
                 elif req == FATAL_ERROR:
                     self._stop()
@@ -269,7 +272,8 @@ def run_render_server(command, response, render_action, report):
             elif action != FRAME:
                 # blow up with fatal error
                 # we could try again, but who knows how we even got here
-                raise RenderServerError("Unrecognized command: {}".format(action))
+                raise RenderServerError(
+                    "Unrecognized command: {}".format(action))
 
             frame_number, frame_time, frame = payload
 
@@ -280,7 +284,7 @@ def run_render_server(command, response, render_action, report):
                 st = traceback.format_exc()
                 log_error(str(err) + '\n' + st, "Nonfatal", frame_number)
 
-            if report:# and frame_number % 1 == 0:
+            if report:  # and frame_number % 1 == 0:
                 now = time()
                 log.debug("Framerate: {}".format(1 / (now - log_time)))
                 log_time = now
@@ -304,6 +308,7 @@ class ControlError (Exception):
     """
     pass
 
+
 class RenderError (Exception):
     """Report a non-fatal error during rendering.
 
@@ -312,8 +317,7 @@ class RenderError (Exception):
     """
     pass
 
+
 class RenderServerError (Exception):
     """Report an internal error in the render server."""
     pass
-
-
